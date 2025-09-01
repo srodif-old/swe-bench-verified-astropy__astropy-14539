@@ -1450,13 +1450,33 @@ class TableDataDiff(_BaseDiff):
             ):
                 diffs = where_not_allclose(arra, arrb, rtol=self.rtol, atol=self.atol)
             elif "P" in col.format:
+                # Variable-length arrays (VLA) need special handling
+                # The original implementation using np.allclose() directly on VLA elements
+                # can fail to recognize identical data due to how VLA data is stored internally
+                def vla_elements_equal(a, b):
+                    """Compare VLA elements safely."""
+                    try:
+                        # For exact comparison (default tolerances), use array_equal
+                        if self.rtol == 0.0 and self.atol == 0.0:
+                            return np.array_equal(a, b)
+                        # For tolerance-based comparison, use allclose
+                        else:
+                            return np.allclose(a, b, rtol=self.rtol, atol=self.atol)
+                    except (ValueError, TypeError):
+                        # Fallback to direct comparison if numpy operations fail
+                        try:
+                            return np.array_equal(a, b)
+                        except:
+                            # Last resort: element-wise comparison
+                            if hasattr(a, '__len__') and hasattr(b, '__len__'):
+                                return len(a) == len(b) and np.all(a == b)
+                            return a == b
+                
                 diffs = (
                     [
                         idx
                         for idx in range(len(arra))
-                        if not np.allclose(
-                            arra[idx], arrb[idx], rtol=self.rtol, atol=self.atol
-                        )
+                        if not vla_elements_equal(arra[idx], arrb[idx])
                     ],
                 )
             else:
