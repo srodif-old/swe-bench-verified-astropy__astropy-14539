@@ -923,3 +923,27 @@ def test_rawdatadiff_diff_with_rtol(tmp_path):
 
     assert "...and at 1 more indices." in str1
     assert "...and at 1 more indices." not in str2
+
+
+def test_fitsdiff_identical_vla_file():
+    """Regression test for https://github.com/astropy/astropy/issues/14539
+
+    FITSDiff should not report differences when comparing identical files
+    containing VLA (Variable-Length Array) columns.
+    """
+    # Create VLA column as described in the issue
+    col = fits.Column('a', format='QD', array=[[0], [0, 0]])
+    hdu = fits.BinTableHDU.from_columns([col])
+    
+    # Test diffing the same HDU data
+    diff = TableDataDiff(hdu.data, hdu.data)
+    assert diff.identical, "TableDataDiff should find identical VLA data as identical"
+    
+    # Test diffing the same file
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix='.fits') as f:
+        hdu.writeto(f.name, overwrite=True)
+        
+        # This should be identical since it's the same file
+        diff = FITSDiff(f.name, f.name)
+        assert diff.identical, f"FITSDiff should find identical files as identical, got report:\n{diff.report()}"
