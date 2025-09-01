@@ -1449,7 +1449,7 @@ class TableDataDiff(_BaseDiff):
                 arrb.dtype, np.floating
             ):
                 diffs = where_not_allclose(arra, arrb, rtol=self.rtol, atol=self.atol)
-            elif "P" in col.format:
+            elif "P" in col.format or "Q" in col.format:
                 # Variable-length arrays (VLA) need special handling
                 # The original implementation using np.allclose() directly on VLA elements
                 # can fail to recognize identical data due to how VLA data is stored internally
